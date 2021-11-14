@@ -2,36 +2,27 @@ import flask
 from flask_restful import Resource
 
 from api import telegram
-from bootstrap import db
-from database.models import Client
+from api.telegram import Bot
+from database.models import Subscription
 
 
 class NotifyError(Resource):
     def post(self):
         data = flask.request.get_json()
-        message = data['message']
+        server_message = data['message']
         device_id = data['tablet_id']
-        clients = Client.query.filter_by(device_id=device_id).all()
 
-        for client in clients:
-            telegram.send_message(client.user_id, message)
+        subscriptions = Subscription.query.all()
+        for subscription in subscriptions:
+            if subscription.device_id == device_id:
+                message = f"{server_message}\n\nID принтера: {device_id}\nАдрес: {subscription.address}"
+                Bot.send_message(subscription.chat_id, subscription.user.id, message)
 
 
-class AddClient(Resource):
+class TelegramWebhook(Resource):
     def post(self):
         data = flask.request.get_json()
         message = data['message']
-        client_id = message['from']['id']
-        chat_id = message['chat']['id']
-        text = message['text']
 
-        try:
-            client = Client(user_id=client_id, device_id=text)
-            db.session.add(client)
-            db.session.commit()
-
-            success_message = "Вы добавлены в базу данных."
-            telegram.send_message(chat_id, success_message)
-        except Exception:
-            error_message = "Что-то пошло не так. Не удалось добавить Вас в базу данных."
-            telegram.send_message(chat_id, error_message)
+        bot = telegram.Bot()
+        bot.accept_message(message)
