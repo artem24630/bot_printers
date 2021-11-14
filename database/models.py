@@ -21,5 +21,4 @@ class Subscription(db.Model):
     telegram_user_id = db.Column(db.Integer, db.ForeignKey('telegram_user.id'), nullable=False)
 
 
-db.drop_all()
 db.create_all()
